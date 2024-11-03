@@ -1,22 +1,29 @@
 use crate::engine::context::Context;
 
 use sdl2::pixels::Color;
+use sdl2::rect::Rect;
+use sdl2::render::TextureQuery;
 
-pub fn render(ctx: &mut Context, text: &str) -> Result<(), String> {
-    // Create the surface in a separate scope so the font borrow ends
-    let surface = {
-        let font = ctx
-            // TODO: handle font selection somewhere else rather than hardcoding Dank Mono
-            .load_font("/Users/chroma/Library/Fonts/DankMonoNerdFont-Regular.ttf")
-            .unwrap();
+pub fn render(ctx: &mut Context, text: &str, x: i32, y: i32) -> Result<(), String> {
+    ctx.draw(|canvas, assets, texture_creator| {
+        let font = assets
+            .get_font("default")
+            .ok_or_else(|| format!("Font not found: {}", "default"))?;
 
-        font.render(text)
+        let surface = font
+            .render(text)
             .blended(Color::RGB(255, 255, 255))
-            .unwrap()
-    }; // font borrow ends here
+            .map_err(|e| e.to_string())?;
 
-    // Now we can borrow ctx again
-    ctx.render_texture(&surface, 10, 10)?;
+        let texture = texture_creator
+            .create_texture_from_surface(&surface)
+            .map_err(|e| e.to_string())?;
 
-    Ok(())
+        let TextureQuery { width, height, .. } = texture.query();
+        let target = Rect::new(x, y, width, height);
+
+        canvas.copy(&texture, None, Some(target))?;
+
+        Ok(())
+    })
 }

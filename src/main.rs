@@ -21,7 +21,9 @@ fn main() {
         .title("Valewind")
         .dimensions(800, 600)
         .build()
-        .unwrap(); // TODO: handle context init error more explicitly
+        .unwrap() // TODO: handle context init error more explicitly
+        .initialize()
+        .unwrap();
 
     main_loop::run(ctx, &state);
 }

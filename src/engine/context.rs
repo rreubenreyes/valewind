@@ -1,23 +1,44 @@
 extern crate sdl2;
-
-use sdl2::rect::Rect;
-use sdl2::render::Canvas;
-use sdl2::render::TextureQuery;
-use sdl2::surface::Surface;
+use sdl2::render::{Canvas, TextureCreator};
 use sdl2::ttf;
-use sdl2::ttf::Font;
-use sdl2::ttf::FontStyle;
-use sdl2::ttf::Sdl2TtfContext;
-use sdl2::video::Window;
+use sdl2::ttf::{Font, FontStyle, Sdl2TtfContext};
+use sdl2::video::{Window, WindowContext};
 use sdl2::EventPump;
+use std::collections::HashMap;
 use std::error::Error;
 use std::fmt;
+use std::sync::Arc;
 
-pub struct Context {
-    sdl_context: sdl2::Sdl,
-    events: EventPump,
-    canvas: Canvas<Window>,
-    ttf: Sdl2TtfContext,
+pub struct AssetCache {
+    fonts: HashMap<String, Font<'static, 'static>>,
+}
+
+impl AssetCache {
+    pub fn new() -> Self {
+        Self {
+            fonts: HashMap::new(),
+        }
+    }
+
+    pub fn load_font(
+        &mut self,
+        context: &Sdl2TtfContext,
+        name: &str,
+        path: &str,
+        size: u16,
+    ) -> Result<(), String> {
+        let mut font = context.load_font(path, size)?;
+        font.set_style(FontStyle::NORMAL);
+
+        // Convert the font to 'static since it's tied to the Arc'd context
+        let font: Font<'static, 'static> = unsafe { std::mem::transmute(font) };
+        self.fonts.insert(name.to_string(), font);
+        Ok(())
+    }
+
+    pub fn get_font(&self, name: &str) -> Option<&Font> {
+        self.fonts.get(name)
+    }
 }
 
 pub struct ContextBuilder<'a> {
@@ -97,50 +118,64 @@ impl<'a> ContextBuilder<'a> {
             .build()
             .map_err(|e| ContextError::CanvasInit(e))?;
 
+        let texture_creator = canvas.texture_creator();
+
         let events = sdl_context
             .event_pump()
             .map_err(|e| ContextError::EventInit(e))?;
 
-        let ttf = ttf::init().map_err(|e| ContextError::TtfInit(e))?;
+        let ttf = Arc::new(ttf::init().map_err(|e| ContextError::TtfInit(e))?);
 
         Ok(Context {
             sdl_context,
             events,
             canvas,
             ttf,
+            texture_creator,
+            assets: AssetCache::new(),
         })
     }
 }
 
+pub struct Context {
+    sdl_context: sdl2::Sdl,
+    events: EventPump,
+    canvas: Canvas<Window>,
+    ttf: Arc<Sdl2TtfContext>,
+    texture_creator: TextureCreator<WindowContext>,
+    assets: AssetCache,
+}
+
 impl Context {
+    pub fn initialize(mut self) -> Result<Self, String> {
+        self.initialize_fonts()?;
+
+        Ok(self)
+    }
+
     pub fn events(&mut self) -> &mut EventPump {
         &mut self.events
     }
 
-    pub fn canvas(&mut self) -> &mut Canvas<Window> {
-        &mut self.canvas
-    }
-
-    pub fn load_font(&self, path: &str) -> Result<Font, String> {
-        let mut font = self.ttf.load_font(path, 32)?;
-        font.set_style(FontStyle::NORMAL);
-
-        Ok(font)
-    }
-
-    // TODO: Handle SDL2 entity creation separately, "send" to texture creator/etc
-    pub fn render_texture(&mut self, surface: &Surface, x: i32, y: i32) -> Result<(), String> {
-        let canvas = self.canvas();
-        let texture_creator = canvas.texture_creator();
-        let texture = texture_creator
-            .create_texture_from_surface(surface)
-            .map_err(|e| e.to_string())?;
-
-        let TextureQuery { width, height, .. } = texture.query();
-        let target = Rect::new(x, y, width, height);
-
-        self.canvas.copy(&texture, None, Some(target))?;
+    fn initialize_fonts(&mut self) -> Result<(), String> {
+        self.assets.load_font(
+            &self.ttf,
+            "default",
+            "/Users/chroma/Library/Fonts/DankMonoNerdFont-Regular.ttf",
+            32,
+        )?;
 
         Ok(())
+    }
+
+    pub fn draw<F>(&mut self, draw_fn: F) -> Result<(), String>
+    where
+        F: FnOnce(
+            &mut Canvas<Window>,
+            &mut AssetCache,
+            &TextureCreator<WindowContext>,
+        ) -> Result<(), String>,
+    {
+        draw_fn(&mut self.canvas, &mut self.assets, &self.texture_creator)
     }
 }
