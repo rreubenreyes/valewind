@@ -1,0 +1,7 @@
+[package]
+name = "valewind"
+version = "0.0.1"
+edition = "2021"
+
+[dependencies]
+sdl2 = "0.37.0"
