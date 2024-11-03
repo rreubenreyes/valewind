@@ -101,30 +101,26 @@ impl<'a> ContextBuilder<'a> {
     }
 
     pub fn build(&self) -> Result<Context, ContextError> {
-        let sdl_context = sdl2::init().map_err(|e| ContextError::SdlInit(e))?;
+        let sdl_context = sdl2::init().map_err(ContextError::SdlInit)?;
 
-        let video_subsystem = sdl_context
-            .video()
-            .map_err(|e| ContextError::VideoInit(e))?;
+        let video_subsystem = sdl_context.video().map_err(ContextError::VideoInit)?;
 
         let window = video_subsystem
             .window(self.title, self.canvas_width, self.canvas_height)
             .position_centered()
             .build()
-            .map_err(|e| ContextError::WindowInit(e))?;
+            .map_err(ContextError::WindowInit)?;
 
         let canvas = window
             .into_canvas()
             .build()
-            .map_err(|e| ContextError::CanvasInit(e))?;
+            .map_err(ContextError::CanvasInit)?;
 
         let texture_creator = canvas.texture_creator();
 
-        let events = sdl_context
-            .event_pump()
-            .map_err(|e| ContextError::EventInit(e))?;
+        let events = sdl_context.event_pump().map_err(ContextError::EventInit)?;
 
-        let ttf = Arc::new(ttf::init().map_err(|e| ContextError::TtfInit(e))?);
+        let ttf = Arc::new(ttf::init().map_err(ContextError::TtfInit)?);
 
         Ok(Context {
             sdl_context,
