@@ -1,6 +1,5 @@
-use super::context::Context;
-use super::rendering;
 use super::state::GameState;
+use super::system_context::context::Context;
 
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
@@ -8,44 +7,66 @@ use sdl2::pixels::Color;
 use std::time::Duration;
 
 pub fn run(mut ctx: Context, _state: &impl GameState) {
-    // XXX: boilerplate
     let mut i = 0;
     'running: loop {
-        // XXX: boilerplate
         i = (i + 1) % 255;
 
-        // XXX: boilerplate; this should eventually be sent as a tick from the passed state
-        // TODO: draw from scene manager
-        let _ = ctx.draw(|canvas, _, _| {
-            canvas.set_draw_color(Color::RGB(i, 64, 255 - i));
-            canvas.clear();
-
-            Ok(())
+        // Handle events with a closure
+        let mut quit = false;
+        ctx.poll_events(|events| {
+            for event in events.poll_iter() {
+                match event {
+                    Event::Quit { .. }
+                    | Event::KeyDown {
+                        keycode: Some(Keycode::Escape),
+                        ..
+                    } => {
+                        quit = true;
+                        break;
+                    }
+                    _ => {}
+                }
+            }
         });
 
-        // TODO: handle input from context
-        for event in ctx.events().poll_iter() {
-            match event {
-                Event::Quit { .. }
-                | Event::KeyDown {
-                    keycode: Some(Keycode::Escape),
-                    ..
-                } => break 'running,
-                _ => {}
-            }
+        if quit {
+            break 'running;
         }
 
-        // XXX: testing text rendering
-        rendering::text::render(&mut ctx, &format!("Hello, Valewind {}", i), 10, 10).unwrap();
+        // Handle all graphics operations in a single closure
+        ctx.gfx(|canvas, asset_loader, ttf_context| {
+            // font via asset loader
+            let font = asset_loader
+                .get_font(
+                    ttf_context,
+                    "default",
+                    "/Users/chroma/Library/Fonts/DankMonoNerdFont-Regular.ttf",
+                    16,
+                )
+                .unwrap();
 
-        // The rest of the game loop goes here...
+            // colors
+            canvas
+                .draw(|c, _| {
+                    c.set_draw_color(Color::RGB(i, 64, 255 - i));
+                    c.clear();
+                    Ok(())
+                })
+                .unwrap();
 
-        // render at 60 FPS
-        let _ = ctx.draw(|canvas, _, _| {
-            canvas.present();
+            // testing text rendering
+            canvas
+                .render_text("Hello, Valewind", font, Color::RGB(255, 255, 255), 100, 100)
+                .unwrap();
 
-            Ok(())
+            canvas
+                .draw(|c, _| {
+                    c.present();
+                    Ok(())
+                })
+                .unwrap();
         });
+
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
     }
 }

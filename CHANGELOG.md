@@ -2,14 +2,14 @@
 
 ## [Unreleased]
 
-- Better lifetime management for assets
-
-- Context responsibility cleanup
-
-  - Context should just be an API by which to pass abstracted data into to SDL2
-
 - Poll for user input
 - Entity component system
+
+## [0.0.4]
+
+- Compose `Context` from separate system context structs
+- Better(?) lifetime management for assets
+  - `unsafe` used to give fonts a static lifetime - may need to look into alternatives
 
 ## [0.0.3]
 

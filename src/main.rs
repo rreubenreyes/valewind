@@ -1,8 +1,8 @@
 mod engine;
 
-use engine::context;
 use engine::main_loop;
 use engine::state::GameState;
+use engine::system_context::context;
 
 struct State {}
 
@@ -19,10 +19,9 @@ fn main() {
 
     let ctx = context::ContextBuilder::new()
         .title("Valewind")
-        .dimensions(800, 600)
+        .canvas_size(1024, 768)
+        .assets_path("assets/")
         .build()
-        .unwrap() // TODO: handle context init error more explicitly
-        .initialize()
         .unwrap();
 
     main_loop::run(ctx, &state);
