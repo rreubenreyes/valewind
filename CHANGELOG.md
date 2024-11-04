@@ -4,6 +4,15 @@
 
 - Poll for user input
 - Entity component system
+- Better graphics API
+  - Less leaky abstractions over texture placement
+- More robust asset management/more useful asset cache structure
+  - `AssetManager` should support caching different fonts/configurations for the same underlying asset
+
+## [0.0.5]
+
+- Asset loading without `unsafe` (hooray!)
+  - However, assets are loaded from disk without memoization - this could get expensive.
 
 ## [0.0.4]
 

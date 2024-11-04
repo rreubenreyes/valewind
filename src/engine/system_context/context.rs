@@ -1,7 +1,7 @@
 extern crate sdl2;
 
 use sdl2::ttf;
-use sdl2::ttf::{InitError as Sdl2TtfInitError, Sdl2TtfContext};
+use sdl2::ttf::InitError as Sdl2TtfInitError;
 use std::error::Error;
 use std::fmt;
 
@@ -30,7 +30,6 @@ impl fmt::Display for ContextError {
 
 impl Error for ContextError {}
 
-// Configuration struct for initialization
 #[derive(Debug)]
 pub struct ContextConfig {
     canvas_title: String,
@@ -50,7 +49,6 @@ impl Default for ContextConfig {
     }
 }
 
-// Builder for configuration
 pub struct ContextBuilder {
     config: ContextConfig,
 }
@@ -83,14 +81,12 @@ impl ContextBuilder {
     }
 }
 
-// Main context struct with all subsystems
 pub struct Context {
-    sdl_context: sdl2::Sdl,
-    ttf_context: Sdl2TtfContext,
+    _sdl_context: sdl2::Sdl,
+
     canvas: Canvas,
     asset_loader: AssetLoader,
     event_pump: EventPump,
-    config: ContextConfig,
 }
 
 impl Context {
@@ -109,23 +105,21 @@ impl Context {
         let event_pump =
             EventPump::new(&sdl_context).map_err(|e| ContextError::EventsInit(e.to_string()))?;
 
-        let asset_loader = AssetLoader::new();
+        let asset_loader = AssetLoader::new(ttf_context);
 
         Ok(Self {
-            sdl_context,
-            ttf_context,
+            _sdl_context: sdl_context,
             canvas,
             asset_loader,
             event_pump,
-            config,
         })
     }
 
     pub fn gfx<F, R>(&mut self, f: F) -> R
     where
-        F: FnOnce(&mut Canvas, &mut AssetLoader, &Sdl2TtfContext) -> R,
+        F: FnOnce(&mut Canvas, &mut AssetLoader) -> R,
     {
-        f(&mut self.canvas, &mut self.asset_loader, &self.ttf_context)
+        f(&mut self.canvas, &mut self.asset_loader)
     }
 
     pub fn poll_events<F>(&mut self, f: F)

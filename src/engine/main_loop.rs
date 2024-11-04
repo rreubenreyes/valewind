@@ -9,9 +9,9 @@ use std::time::Duration;
 pub fn run(mut ctx: Context, _state: &impl GameState) {
     let mut i = 0;
     'running: loop {
+        // XXX: this is all test code to test out asset loading and rendering
         i = (i + 1) % 255;
 
-        // Handle events with a closure
         let mut quit = false;
         ctx.poll_events(|events| {
             for event in events.poll_iter() {
@@ -33,17 +33,16 @@ pub fn run(mut ctx: Context, _state: &impl GameState) {
             break 'running;
         }
 
-        // Handle all graphics operations in a single closure
-        ctx.gfx(|canvas, asset_loader, ttf_context| {
-            // font via asset loader
-            let font = asset_loader
-                .get_font(
-                    ttf_context,
-                    "default",
-                    "/Users/chroma/Library/Fonts/DankMonoNerdFont-Regular.ttf",
-                    16,
-                )
-                .unwrap();
+        ctx.gfx(|canvas, asset_loader| {
+            // TODO: do asset registration somewhere else; probably want
+            // `AssetLoader.register(config)` or something
+            let _ = asset_loader.register_font(
+                "normal",
+                "/Users/chroma/Library/Fonts/DankMonoNerdFont-Regular.ttf",
+                24,
+            );
+
+            let font = asset_loader.load_font("normal").unwrap();
 
             // colors
             canvas
@@ -56,7 +55,13 @@ pub fn run(mut ctx: Context, _state: &impl GameState) {
 
             // testing text rendering
             canvas
-                .render_text("Hello, Valewind", font, Color::RGB(255, 255, 255), 100, 100)
+                .render_text(
+                    &format!("Hello, Valewind {}", i),
+                    &font,
+                    Color::RGB(255, 255, 255),
+                    100,
+                    100,
+                )
                 .unwrap();
 
             canvas

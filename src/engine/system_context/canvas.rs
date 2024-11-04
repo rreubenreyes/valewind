@@ -14,7 +14,6 @@ pub enum CanvasError {
     VideoInit(String),
     WindowInit(sdl2::video::WindowBuildError),
     CanvasInit(sdl2::IntegerOrSdlError),
-    FontNotFound(String),
     TextureCreation(String),
     RenderTarget(String),
 }
@@ -25,9 +24,8 @@ impl fmt::Display for CanvasError {
             CanvasError::VideoInit(e) => write!(f, "Video initialization error: {}", e),
             CanvasError::WindowInit(e) => write!(f, "Window initialization error: {}", e),
             CanvasError::CanvasInit(e) => write!(f, "Canvas initialization error: {}", e),
-            CanvasError::FontNotFound(e) => write!(f, "Font not found: {}", e),
-            CanvasError::TextureCreation(e) => write!(f, "Failed to create texture: {}", e),
-            CanvasError::RenderTarget(e) => write!(f, "Failed to set render target: {}", e),
+            CanvasError::TextureCreation(e) => write!(f, "failed to create texture: {}", e),
+            CanvasError::RenderTarget(e) => write!(f, "failed to set render target: {}", e),
         }
     }
 }
@@ -66,6 +64,8 @@ impl Canvas {
         })
     }
 
+    // XXX: not sure if I like this - a catch-all method to do anything to the canvas may be
+    // necessary, but don't want to jump the gun... keep it for now
     pub fn draw<F>(&mut self, draw_fn: F) -> Result<(), String>
     where
         F: FnOnce(&mut SdlCanvas<Window>, &TextureCreator<WindowContext>) -> Result<(), String>,
@@ -81,24 +81,20 @@ impl Canvas {
         x: i32,
         y: i32,
     ) -> Result<(), CanvasError> {
-        // Render the text to a surface
         let surface = font
             .render(text)
             .solid(color)
             .map_err(|e| CanvasError::TextureCreation(e.to_string()))?;
 
-        // Create texture from surface
         let texture_creator = self.canvas.texture_creator();
         let texture = texture_creator
             .create_texture_from_surface(surface)
             .map_err(|e| CanvasError::TextureCreation(e.to_string()))?;
 
-        // Get the size of the rendered text
         let (w, h) = font
             .size_of(text)
             .map_err(|e| CanvasError::TextureCreation(e.to_string()))?;
 
-        // Render the texture
         let target = Rect::new(x, y, w, h);
         self.canvas
             .copy(&texture, None, Some(target))
